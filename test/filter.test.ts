@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { cveExistsOnlyBeforeSnapshot, filterKnownCves } from "../lib/filter";
+import {
+	cveExistsOnlyBeforeSnapshot,
+	filterKnownCves,
+	fingerprintInSnapshot,
+} from "../lib/filter";
 import { compareVersions } from "../lib/semver";
 import type { CveParse, Snapshot } from "../lib/types";
 
@@ -74,5 +78,19 @@ describe("filterKnownCves", () => {
 			snapshot("7.0.1"),
 		);
 		expect(kept.map((cve) => cve.id)).toEqual(["CVE-2022-4973", "CVE-2024-4439"]);
+	});
+});
+
+describe("fingerprintInSnapshot", () => {
+	const snap = snapshot("7.0.1");
+	it("keeps fixes dated on or before the snapshot", () => {
+		expect(
+			fingerprintInSnapshot(snap, { commit_date: "2024-12-01T00:00:00Z" }),
+		).toBe(true);
+	});
+	it("drops later master fixes", () => {
+		expect(
+			fingerprintInSnapshot(snap, { commit_date: "2026-09-08T21:34:42Z" }),
+		).toBe(false);
 	});
 });

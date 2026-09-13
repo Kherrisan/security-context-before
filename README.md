@@ -30,9 +30,9 @@ or `x-api-key: $PROXY_API_KEY`.
 
 1. Resolve `ref` on GitHub (SHA, date, product version / `$wp_version`).
 2. Fetch SC JSON for the repo **in parallel** with GitHub and the upstream MCP call.
-3. Parse each CVE’s affected/fixed version via Vercel AI Gateway. Cache by CVE id.
+3. Parse each CVE’s affected/fixed version via DeepSeek **Responses API**. Cache by CVE id.
 4. Keep a CVE only if `snapshotVersion > affectedMax/fixedIn`.
-5. Keep a fingerprint only if its fix commit is an ancestor of the snapshot SHA.
+5. Keep a fingerprint only if its fix `commit_date` is on or before the snapshot.
 
 Unknown version ranges are **dropped** (no leak).
 
@@ -40,11 +40,11 @@ Unknown version ranges are **dropped** (no leak).
 
 ```bash
 cp .env.example .env.local
-# set PROXY_API_KEY, AI_GATEWAY_API_KEY, GITHUB_TOKEN
+# set PROXY_API_KEY, DEEPSEEK_API_KEY, GITHUB_TOKEN
 npx vercel
 ```
 
-Vercel env: `PROXY_API_KEY`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_MODEL`, `GITHUB_TOKEN`. Optional durable cache: `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`.
+Vercel env: `PROXY_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` (default `deepseek-flash`), `GITHUB_TOKEN`. Optional durable cache: `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`.
 
 Local:
 

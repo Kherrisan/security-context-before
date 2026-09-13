@@ -1,5 +1,5 @@
 import { compareVersions } from "./semver";
-import type { CveParse, KnownCve, Snapshot } from "./types";
+import type { CveParse, Fingerprint, KnownCve, Snapshot } from "./types";
 
 /**
  * Keep CVEs that do not affect the snapshot (already fixed strictly before it).
@@ -23,3 +23,12 @@ export const filterKnownCves = (
 	(cves ?? []).filter((cve) =>
 		cveExistsOnlyBeforeSnapshot(parsed.get(cve.id.toUpperCase()), snapshot),
 	);
+
+/** Fix commits dated after the snapshot are future knowledge. */
+export const fingerprintInSnapshot = (snapshot: Snapshot, fp: Fingerprint) => {
+	if (!fp.commit_date || !snapshot.commitDate) return false;
+	const fixAt = Date.parse(fp.commit_date);
+	const snapAt = Date.parse(snapshot.commitDate);
+	if (Number.isNaN(fixAt) || Number.isNaN(snapAt)) return false;
+	return fixAt <= snapAt;
+};

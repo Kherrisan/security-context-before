@@ -27,8 +27,15 @@ const handler = createMcpHandler(
 					wait: z.number().int().min(0).max(60).optional(),
 				},
 			},
-			async ({ repo, ref, wait }) =>
-				mcpTextResult(await filteredSecurityContext(repo, ref, wait)),
+			async ({ repo, ref, wait }) => {
+				if (wait) {
+					await callSecurityContextTool("get_security_context", {
+						repo,
+						wait,
+					}).catch(() => "");
+				}
+				return mcpTextResult(await filteredSecurityContext(repo, ref));
+			},
 		);
 
 		server.registerTool(
@@ -47,7 +54,7 @@ const handler = createMcpHandler(
 					repo: `${owner}/${name}`,
 					...(wait != null ? { wait } : { wait: 60 }),
 				}).catch(() => "");
-				return mcpTextResult(await filteredSecurityContext(repo, ref, wait));
+				return mcpTextResult(await filteredSecurityContext(repo, ref));
 			},
 		);
 
