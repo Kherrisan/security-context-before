@@ -1,6 +1,8 @@
 # security-context-before
 
-Authenticated **remote MCP** proxy in front of [Security Context](https://securitycontext.dev). Same tools as SC. Repo queries take a snapshot `ref` (tag or commit). Responses keep only CVEs and fix fingerprints that already landed **before** that snapshot, so live bugs at the tag are not handed to the agent.
+[Security Context](https://securitycontext.dev) gives an agent the CVE and security-fix history of a program, so it can hunt with variant analysis and related strategies instead of starting from a blank tree. That is useful in production, but it breaks **recall evaluation on already-discovered bugs**: the agent is handed the answer key, so the score no longer measures unknown-vulnerability discovery. This proxy keeps the same SC tools while stripping CVEs and fixes that still apply at a requested snapshot, so a recall job can use SC as a historical map without leaking live ground truth.
+
+Authenticated **remote MCP** proxy in front of Security Context. Repo queries take a snapshot `ref` (tag or commit). Responses keep only CVEs and fix fingerprints that already landed **before** that snapshot.
 
 ## Endpoint
 
