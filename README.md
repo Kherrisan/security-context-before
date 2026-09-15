@@ -23,10 +23,12 @@ or `x-api-key: $PROXY_API_KEY`.
 | `get_security_context` | required `ref` |
 | `create_security_context` | required `ref` |
 | `get_vulnerability_leads` | required `ref` |
-| `get_vulnerability` | pass-through |
-| `search_vulnerabilities` | pass-through |
+| `get_vulnerability` | required `project` + `ref`; same-project live CVEs withheld |
+| `search_vulnerabilities` | required `project` + `ref`; same-project live hits removed |
 
-`ref` is a git tag (`7.0.1`) or commit SHA.
+`ref` is a git tag (`7.0.1`) or commit SHA. `project` is the repo under test (`WordPress/WordPress` or `wordpress/wordpress`).
+
+CVE search/get: if the record’s **Affected** product is this `project`, keep it only when the snapshot version is already past the CVE range (same rule as known_cves). Other products are returned unchanged.
 
 ## Filter
 
@@ -60,4 +62,4 @@ MCP inspector: Streamable HTTP → `http://localhost:3210/api/mcp` with the bear
 
 ## Vulseek
 
-Point the org MCP server `securitycontext` URL at this `/api/mcp` and send `ref` from the job tag. The upstream SC tools do **not** have `ref`; orch/hunter tool schemas must include it when using this proxy.
+Point the org MCP server `securitycontext` URL at this `/api/mcp` and send `ref` from the job tag (and `project` on search/get). The upstream SC tools do **not** have `ref` or `project`; orch/hunter tool schemas must include them when using this proxy.

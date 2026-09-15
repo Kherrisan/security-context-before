@@ -89,6 +89,47 @@ export const resolveSnapshot = async (repo: string, ref: string): Promise<Snapsh
 	};
 };
 
+const fallbackSnapshot = (project: string, ref: string): Snapshot => {
+	const cleaned = project
+		.trim()
+		.replace(/^https?:\/\/github\.com\//i, "")
+		.replace(/\.git$/, "");
+	const [owner, repo] = cleaned.includes("/")
+		? cleaned.split("/")
+		: ["", cleaned];
+	const refTrim = ref.trim();
+	return {
+		owner: owner || "",
+		repo: repo || cleaned || "unknown",
+		ref: refTrim,
+		sha: isSha(refTrim) ? refTrim : refTrim,
+		commitDate: null,
+		productVersion: isSha(refTrim) ? null : refTrim.replace(/^v/i, ""),
+	};
+};
+
+/**
+ * Snapshot for CVE search/get. `project` may be GitHub owner/name or a product slug.
+ * Tag refs still yield a productVersion when GitHub resolve is unavailable.
+ */
+export const resolveProjectSnapshot = async (
+	project: string,
+	ref: string,
+): Promise<Snapshot> => {
+	const cleaned = project
+		.trim()
+		.replace(/^https?:\/\/github\.com\//i, "")
+		.replace(/\.git$/, "");
+	if (cleaned.includes("/")) {
+		try {
+			return await resolveSnapshot(cleaned, ref);
+		} catch {
+			return fallbackSnapshot(cleaned, ref);
+		}
+	}
+	return fallbackSnapshot(cleaned, ref);
+};
+
 /** True when `commitSha` is the snapshot or an ancestor of it (fix already in tree). */
 export const isAncestorOfSnapshot = async (
 	snapshot: Snapshot,

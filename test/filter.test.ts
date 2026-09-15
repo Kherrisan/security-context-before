@@ -3,6 +3,8 @@ import {
 	cveExistsOnlyBeforeSnapshot,
 	filterKnownCves,
 	fingerprintInSnapshot,
+	keepVulnerability,
+	sameProject,
 } from "../lib/filter";
 import { compareVersions } from "../lib/semver";
 import type { CveParse, Snapshot } from "../lib/types";
@@ -78,6 +80,75 @@ describe("filterKnownCves", () => {
 			snapshot("7.0.1"),
 		);
 		expect(kept.map((cve) => cve.id)).toEqual(["CVE-2022-4973", "CVE-2024-4439"]);
+	});
+});
+
+describe("sameProject", () => {
+	it("matches GitHub owner/name to vendor/product", () => {
+		expect(sameProject("WordPress/WordPress", ["wordpress/wordpress"])).toBe(true);
+		expect(sameProject("https://github.com/WordPress/WordPress", ["wordpress/wordpress"])).toBe(
+			true,
+		);
+		expect(sameProject("wordpress", ["wordpress/wordpress"])).toBe(true);
+	});
+
+	it("does not match a different product", () => {
+		expect(sameProject("WordPress/WordPress", ["apache/log4j"])).toBe(false);
+		expect(sameProject("WordPress/WordPress", [])).toBe(false);
+	});
+
+	it("matches if any affected product is the project", () => {
+		expect(
+			sameProject("WordPress/WordPress", ["apache/log4j", "wordpress/wordpress"]),
+		).toBe(true);
+	});
+});
+
+describe("keepVulnerability", () => {
+	const snap = snapshot("7.0.1");
+
+	it("drops a same-project CVE still in range", () => {
+		expect(
+			keepVulnerability(
+				"WordPress/WordPress",
+				["wordpress/wordpress"],
+				parse("CVE-2026-63030", "7.0.1", "7.0.2"),
+				snap,
+			),
+		).toBe(false);
+	});
+
+	it("keeps a same-project CVE already fixed before the snapshot", () => {
+		expect(
+			keepVulnerability(
+				"WordPress/WordPress",
+				["wordpress/wordpress"],
+				parse("CVE-2022-4973", "6.0.2", "6.0.2"),
+				snap,
+			),
+		).toBe(true);
+	});
+
+	it("passes through a different-project CVE even if live", () => {
+		expect(
+			keepVulnerability(
+				"WordPress/WordPress",
+				["apache/log4j"],
+				parse("CVE-2021-44228", "2.14.1", "2.15.0"),
+				snap,
+			),
+		).toBe(true);
+	});
+
+	it("drops a same-project CVE with an unknown range", () => {
+		expect(
+			keepVulnerability(
+				"WordPress/WordPress",
+				["wordpress/wordpress"],
+				parse("CVE-X", null, null),
+				snap,
+			),
+		).toBe(false);
 	});
 });
 

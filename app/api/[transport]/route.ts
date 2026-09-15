@@ -2,7 +2,12 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { isAuthorized, unauthorized } from "@/lib/auth";
 import { parseRepo } from "@/lib/github";
-import { filteredLeads, filteredSecurityContext } from "@/lib/pipeline";
+import {
+	filteredGetVulnerability,
+	filteredLeads,
+	filteredSearchVulnerabilities,
+	filteredSecurityContext,
+} from "@/lib/pipeline";
 import { callSecurityContextTool, mcpTextResult } from "@/lib/sc-client";
 
 export const maxDuration = 60;
@@ -76,29 +81,44 @@ const handler = createMcpHandler(
 			"get_vulnerability",
 			{
 				description:
-					"Fetch one CVE or Nuclei template by id (pass-through to Security Context).",
-				inputSchema: { id: z.string().min(1) },
+					"Fetch one CVE or Nuclei template by id. Pass the repo under test and snapshot ref. Same-project CVEs still in range for that snapshot are withheld; other products are unchanged.",
+				inputSchema: {
+					id: z.string().min(1),
+					project: z
+						.string()
+						.min(1)
+						.describe("Current project: GitHub owner/name or vendor/product"),
+					ref: z
+						.string()
+						.min(1)
+						.describe("Snapshot commit SHA or tag (e.g. 7.0.1 or abcdef0)"),
+				},
 			},
-			async ({ id }) =>
-				mcpTextResult(await callSecurityContextTool("get_vulnerability", { id })),
+			async ({ id, project, ref }) =>
+				mcpTextResult(await filteredGetVulnerability(id, project, ref)),
 		);
 
 		server.registerTool(
 			"search_vulnerabilities",
 			{
 				description:
-					"Search the vulnerability database (pass-through to Security Context).",
+					"Search the vulnerability database. Pass the repo under test and snapshot ref. Hits for that project that still affect the snapshot are removed; other products are unchanged.",
 				inputSchema: {
 					query: z.string().min(1),
+					project: z
+						.string()
+						.min(1)
+						.describe("Current project: GitHub owner/name or vendor/product"),
+					ref: z
+						.string()
+						.min(1)
+						.describe("Snapshot commit SHA or tag (e.g. 7.0.1 or abcdef0)"),
 					limit: z.number().int().optional(),
 				},
 			},
-			async ({ query, limit }) =>
+			async ({ query, project, ref, limit }) =>
 				mcpTextResult(
-					await callSecurityContextTool("search_vulnerabilities", {
-						query,
-						...(limit != null ? { limit } : {}),
-					}),
+					await filteredSearchVulnerabilities(query, project, ref, limit),
 				),
 		);
 	},
